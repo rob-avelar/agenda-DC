@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agenda DC</title>
+  <meta name="description" content="Agenda alimentada por planilhas do Excel — programação semanal e diária." />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">📅</span>
+      <div>
+        <h1>Agenda DC</h1>
+        <p class="brand-sub">Programação alimentada por planilha do Excel</p>
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Páginas da agenda">
+      <button class="tab is-active" data-view="semana" role="tab" aria-selected="true">
+        📆 Semana
+      </button>
+      <button class="tab" data-view="dia" role="tab" aria-selected="false">
+        🕒 Dia
+      </button>
+    </nav>
+
+    <div class="topbar-actions">
+      <label class="btn btn-ghost" title="Carregar uma planilha do seu computador (pré-visualização local)">
+        📂 Carregar planilha
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden />
+      </label>
+      <button class="btn btn-ghost" id="btn-reload" title="Recarregar a planilha padrão do repositório">
+        🔄 Recarregar
+      </button>
+    </div>
+  </header>
+
+  <div id="status-bar" class="status-bar" hidden></div>
+
+  <main class="content">
+    <!-- =================== VISÃO SEMANAL =================== -->
+    <section id="view-semana" class="view" role="tabpanel">
+      <div class="view-head">
+        <div>
+          <h2>Programação da semana</h2>
+          <p class="muted" id="semana-info">Visão geral de todas as atividades por dia.</p>
+        </div>
+        <div class="filters">
+          <label>
+            Categoria
+            <select id="filtro-categoria-semana">
+              <option value="">Todas</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="grade-semana" class="grade-semana"></div>
+    </section>
+
+    <!-- =================== VISÃO DIÁRIA =================== -->
+    <section id="view-dia" class="view" role="tabpanel" hidden>
+      <div class="view-head">
+        <div>
+          <h2>Programação do dia</h2>
+          <p class="muted" id="dia-info">Linha do tempo com horários.</p>
+        </div>
+        <div class="filters">
+          <label>
+            Dia
+            <select id="seletor-dia"></select>
+          </label>
+        </div>
+      </div>
+      <div id="timeline-dia" class="timeline"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Agenda DC · dados via Excel</span>
+    <a href="#" id="link-modelo">Baixar planilha modelo (CSV)</a>
+  </footer>
+
+  <!-- SheetJS para leitura de arquivos .xlsx -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
