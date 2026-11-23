@@ -72,6 +72,7 @@ class Pessoa:
     cidade: str = ""
     cargo: str = ""
     telefone: str = ""
+    whatsapp: str = ""  # número no formato internacional, só dígitos (ex.: 5519999990000)
 
 
 # --------------------------------------------------------------------------- #
@@ -178,6 +179,7 @@ def carregar_pessoas() -> list[Pessoa]:
             cidade=str(dados.get("cidade") or "").strip(),
             cargo=str(dados.get("cargo") or "").strip(),
             telefone=formatar_telefone(dados.get("telefone")),
+            whatsapp=numero_whatsapp(dados.get("telefone")),
         ))
     return pessoas
 
@@ -201,12 +203,33 @@ def aniversariantes_do_dia(pessoas: list[Pessoa], hoje: date) -> list[Pessoa]:
     return sorted((p for p in pessoas if faz_hoje(p)), key=lambda p: normalizar(p.nome))
 
 
-def formatar_telefone(valor) -> str:
+def so_digitos(valor) -> str:
     if valor is None:
         return ""
     if isinstance(valor, float) and valor.is_integer():
         valor = int(valor)
-    digitos = re.sub(r"\D", "", str(valor))
+    return re.sub(r"\D", "", str(valor))
+
+
+def numero_whatsapp(valor) -> str:
+    """Número para o link wa.me: DDI 55 + DDD + número, só dígitos."""
+    digitos = so_digitos(valor).lstrip("0")
+    if str(valor).strip().startswith("+"):   # já veio com DDI explícito
+        return digitos if len(digitos) >= 8 else ""
+    if len(digitos) in (10, 11):          # brasileiro sem DDI
+        return "55" + digitos
+    if digitos.startswith("55") and len(digitos) in (12, 13):
+        return digitos
+    return digitos if len(digitos) >= 10 else ""   # outro país, já com DDI
+
+
+def formatar_telefone(valor) -> str:
+    if valor is None:
+        return ""
+    texto = str(valor).strip()
+    digitos = so_digitos(valor).lstrip("0")
+    if texto.startswith("+") and not texto.startswith("+55"):
+        return texto                      # número estrangeiro: mantém como veio
     if digitos.startswith("55") and len(digitos) in (12, 13):
         digitos = digitos[2:]
     if len(digitos) == 11:
@@ -226,9 +249,12 @@ def montar_mensagem(lista: list[Pessoa], hoje: date) -> str:
             bloco.append(f"📍 {local}")
         if p.telefone:
             bloco.append(f"📞 {p.telefone}")
+        if p.whatsapp:
+            # Link clicável que abre a conversa privada com o aniversariante.
+            bloco.append(f"💬 https://wa.me/{p.whatsapp}")
         partes.append("\n".join(bloco))
         partes.append("")
-    rodape = os.environ.get("MENSAGEM_RODAPE") or "Deixe seus parabéns! 🥳"
+    rodape = os.environ.get("MENSAGEM_RODAPE", "").strip()
     if rodape:
         partes.append(rodape)
     return "\n".join(partes).strip()
@@ -279,7 +305,7 @@ def enviar(mensagem: str) -> None:
         apikey = exigir("EVOLUTION_APIKEY")
         numero = grupo if "@" in grupo else f"{grupo}@g.us"
         url = f"{base}/message/sendText/{instancia}"
-        resposta = post_json(url, {"number": numero, "text": mensagem}, {"apikey": apikey})
+        resposta = post_json(url, {"number": numero, "text": mensagem, "linkPreview": False}, {"apikey": apikey})
 
     else:
         sys.exit(f"WHATSAPP_PROVEDOR desconhecido: {provedor!r} (use 'zapi' ou 'evolution').")

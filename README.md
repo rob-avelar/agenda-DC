@@ -81,9 +81,12 @@ cidade, cargo e telefone:
 🎂 *Maria Exemplo*
 📍 Campinas — Vereadora
 📞 (19) 99999-0000
-
-Deixe seus parabéns! 🥳
+💬 https://wa.me/5519999990000
 ```
+
+O link 💬 abre direto uma conversa privada com o aniversariante, para quem
+quiser mandar os parabéns pessoalmente. Nada é enviado automaticamente a ele.
+Telefones sem DDI são tratados como brasileiros (+55).
 
 Nos dias sem aniversariante, nada é enviado. Para mandar um aviso nesses dias,
 crie a variável `MENSAGEM_SEM_ANIVERSARIANTES`.
@@ -134,7 +137,8 @@ algo como `120363012345678901-group`; na Evolution, `120363012345678901@g.us`).
 Recomendo usar um **chip dedicado** conectado ao provedor e adicionado ao grupo.
 
 **3. Personalização opcional** (*Variables*): `MENSAGEM_TITULO`,
-`MENSAGEM_RODAPE` e `MENSAGEM_SEM_ANIVERSARIANTES`.
+`MENSAGEM_RODAPE` (texto no fim da mensagem; vazio por padrão) e
+`MENSAGEM_SEM_ANIVERSARIANTES`.
 
 ### Testando
 
