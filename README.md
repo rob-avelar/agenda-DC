@@ -81,7 +81,7 @@ cidade, cargo e telefone:
 🎂 *Maria Exemplo*
 📍 Campinas — Vereadora
 📞 (19) 99999-0000
-💬 Envie uma mensagem privada ao aniversariante: https://wa.me/5519999990000
+💬 Mensagem privada: https://wa.me/5519999990000
 ```
 
 O link 💬 abre direto uma conversa privada com o aniversariante, para quem
