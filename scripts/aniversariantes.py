@@ -334,6 +334,65 @@ def enviar(mensagem: str) -> None:
         print(f"Resposta: {resposta[:300]}")
 
 
+def get_json(url: str, cabecalhos: dict):
+    req = urllib.request.Request(url, headers=cabecalhos)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as erro:
+        detalhe = erro.read().decode("utf-8", errors="replace")
+        sys.exit(f"Falha ao consultar o provedor (HTTP {erro.code}): {detalhe[:500]}")
+
+
+def listar_grupos(filtro: str = "") -> None:
+    """Mostra os grupos do número conectado e seus IDs (para WHATSAPP_GRUPO_ID)."""
+    provedor = (os.environ.get("WHATSAPP_PROVEDOR") or "zapi").strip().lower()
+    grupos: list[tuple[str, str]] = []  # (nome, id)
+
+    if provedor == "zapi":
+        instancia = exigir("ZAPI_INSTANCIA")
+        token = exigir("ZAPI_TOKEN")
+        cabecalhos = {}
+        if os.environ.get("ZAPI_CLIENT_TOKEN"):
+            cabecalhos["Client-Token"] = os.environ["ZAPI_CLIENT_TOKEN"]
+        base = f"https://api.z-api.io/instances/{instancia}/token/{token}"
+        pagina = 1
+        while True:
+            itens = get_json(f"{base}/chats?page={pagina}&pageSize=100", cabecalhos)
+            if not isinstance(itens, list) or not itens:
+                break
+            for c in itens:
+                eh_grupo = c.get("isGroup") or str(c.get("phone", "")).endswith("-group")
+                if eh_grupo:
+                    grupos.append((str(c.get("name") or "(sem nome)"), str(c.get("phone"))))
+            if len(itens) < 100 or pagina >= 50:
+                break
+            pagina += 1
+
+    elif provedor == "evolution":
+        base = exigir("EVOLUTION_URL").rstrip("/")
+        instancia = exigir("EVOLUTION_INSTANCIA")
+        itens = get_json(f"{base}/group/fetchAllGroups/{instancia}?getParticipants=false",
+                         {"apikey": exigir("EVOLUTION_APIKEY")})
+        for g in itens if isinstance(itens, list) else []:
+            grupos.append((str(g.get("subject") or "(sem nome)"), str(g.get("id"))))
+
+    else:
+        sys.exit(f"WHATSAPP_PROVEDOR desconhecido: {provedor!r} (use 'zapi' ou 'evolution').")
+
+    total = len(grupos)
+    if filtro:
+        alvo = normalizar(filtro)
+        grupos = [g for g in grupos if alvo in normalizar(g[0])]
+    print(f"{total} grupo(s) encontrado(s)"
+          + (f"; {len(grupos)} com '{filtro}' no nome" if filtro else "") + ".")
+    for nome, ident in sorted(grupos, key=lambda g: normalizar(g[0])):
+        print(f"  • {nome}  →  WHATSAPP_GRUPO_ID = {ident}")
+    if not grupos:
+        print("Nenhum grupo para mostrar. Confira se o número conectado já está no grupo"
+              " e se ele já recebeu alguma mensagem lá.")
+
+
 # --------------------------------------------------------------------------- #
 
 def main() -> None:
@@ -341,7 +400,14 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true",
                         help="mostra a mensagem sem enviar")
     parser.add_argument("--data", help="simula outro dia (dd/mm ou dd/mm/aaaa)")
+    parser.add_argument("--listar-grupos", nargs="?", const="", metavar="FILTRO",
+                        help="lista os grupos do número conectado (e seus IDs) e sai; "
+                             "FILTRO opcional = parte do nome do grupo")
     args = parser.parse_args()
+
+    if args.listar_grupos is not None:
+        listar_grupos(args.listar_grupos)
+        return
 
     dry_run = args.dry_run or os.environ.get("DRY_RUN", "").lower() in ("1", "true", "sim")
 

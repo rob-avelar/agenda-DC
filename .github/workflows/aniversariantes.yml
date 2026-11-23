@@ -34,6 +34,13 @@ on:
         description: "Forçar reenvio ao grupo mesmo que já tenha sido enviado hoje"
         type: boolean
         default: false
+      listar_grupos:
+        description: "Listar meus grupos — só mostra o nome do grupo e o ID para WHATSAPP_GRUPO_ID (não envia nada)"
+        type: boolean
+        default: false
+      filtro_grupo:
+        description: "Para 'Listar meus grupos': parte do nome do grupo (recomendado, o log é público)"
+        required: false
 
 permissions:
   contents: read
@@ -56,6 +63,19 @@ jobs:
 
       - run: pip install openpyxl
 
+      - name: Listar meus grupos
+        if: inputs.listar_grupos
+        env:
+          WHATSAPP_PROVEDOR: ${{ vars.WHATSAPP_PROVEDOR || 'zapi' }}
+          ZAPI_INSTANCIA: ${{ secrets.ZAPI_INSTANCIA }}
+          ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
+          ZAPI_CLIENT_TOKEN: ${{ secrets.ZAPI_CLIENT_TOKEN }}
+          EVOLUTION_URL: ${{ secrets.EVOLUTION_URL }}
+          EVOLUTION_INSTANCIA: ${{ secrets.EVOLUTION_INSTANCIA }}
+          EVOLUTION_APIKEY: ${{ secrets.EVOLUTION_APIKEY }}
+          FILTRO_GRUPO: ${{ inputs.filtro_grupo }}
+        run: python3 scripts/aniversariantes.py --listar-grupos "$FILTRO_GRUPO"
+
       - name: Aguardar até 08:00 (Brasília)
         if: github.event_name == 'schedule'
         run: |
@@ -71,6 +91,7 @@ jobs:
 
       - name: Verificar se já foi enviado hoje
         id: trava
+        if: ${{ !inputs.listar_grupos }}
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
           SO_PARA_MIM: ${{ github.event_name == 'workflow_dispatch' && inputs.so_para_mim || 'false' }}
@@ -99,7 +120,7 @@ jobs:
 
       - name: Enviar aniversariantes
         id: envio
-        if: steps.registro.outputs.cache-hit != 'true' || inputs.forcar
+        if: ${{ !inputs.listar_grupos && (steps.registro.outputs.cache-hit != 'true' || inputs.forcar) }}
         env:
           # Dados (nunca no repositório — use Secrets)
           ANIVERSARIANTES_FONTE: ${{ secrets.ANIVERSARIANTES_FONTE }}

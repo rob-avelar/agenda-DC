@@ -133,8 +133,12 @@ Quem nasceu em 29/02 aparece em 28/02 nos anos não bissextos.
 | Evolution | `EVOLUTION_URL`, `EVOLUTION_INSTANCIA`, `EVOLUTION_APIKEY` |
 | Ambos     | `WHATSAPP_GRUPO_ID`: o ID do grupo                         |
 
-O ID do grupo é obtido no painel do provedor (na Z-API, em "listar grupos":
-algo como `120363012345678901-group`; na Evolution, `120363012345678901@g.us`).
+**Como descobrir o ID do grupo:** depois de cadastrar os secrets do
+provedor, vá em *Actions → Aniversariantes do dia → Run workflow*, marque
+**"Listar meus grupos"** e escreva parte do nome do grupo em "filtro". O log
+mostra algo como `Nome do grupo → WHATSAPP_GRUPO_ID = 120363012345678901-group`.
+Nada é enviado. Como o log é público, use o filtro e, se quiser, apague a
+execução depois (menu "⋯ → Delete workflow run").
 Recomendo usar um **chip dedicado** conectado ao provedor e adicionado ao grupo.
 
 **3. Personalização opcional** (*Variables*): `MENSAGEM_TITULO`,
