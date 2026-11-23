@@ -7,6 +7,11 @@ name: Aniversariantes do dia (WhatsApp)
 # meia hora). Por isso o workflow começa às 07:30 (10:30 UTC) e o passo
 # "Aguardar até 08:00" segura o envio até 08:00 em ponto. Se o GitHub atrasar
 # mais de 30 min, a mensagem sai assim que o workflow começar.
+#
+# Trava de 1 envio por dia: se você rodar manualmente (porque atrasou) e
+# depois o automático começar — ou o contrário — o segundo percebe que o grupo
+# já recebeu a mensagem do dia e NÃO envia de novo. Para reenviar mesmo
+# assim, use a opção "Forçar reenvio".
 # Obs.: agendamentos só rodam a partir da branch principal (main).
 
 on:
@@ -25,9 +30,19 @@ on:
       data:
         description: "Simular outro dia (dd/mm) — opcional"
         required: false
+      forcar:
+        description: "Forçar reenvio ao grupo mesmo que já tenha sido enviado hoje"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+# Nunca roda dois envios ao mesmo tempo: o segundo espera o primeiro terminar
+# e então vê, pela trava abaixo, que a mensagem do dia já foi enviada.
+concurrency:
+  group: aniversariantes
+  cancel-in-progress: false
 
 jobs:
   enviar:
@@ -54,7 +69,37 @@ jobs:
             echo "Já passou das 08:00 — enviando agora."
           fi
 
+      - name: Verificar se já foi enviado hoje
+        id: trava
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          SO_PARA_MIM: ${{ github.event_name == 'workflow_dispatch' && inputs.so_para_mim || 'false' }}
+          DATA_SIMULADA: ${{ inputs.data }}
+        run: |
+          echo "dia=$(TZ=America/Sao_Paulo date +%F)" >> "$GITHUB_OUTPUT"
+          # Só envios reais ao grupo, no dia de hoje, contam para a trava.
+          if [ "$DRY_RUN" != "true" ] && [ "$SO_PARA_MIM" != "true" ] && [ -z "$DATA_SIMULADA" ]; then
+            echo "grupo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Consultar registro de envio do dia
+        id: registro
+        if: steps.trava.outputs.grupo == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .enviado
+          key: aniversariantes-enviado-${{ steps.trava.outputs.dia }}
+          lookup-only: true
+
+      - name: Já enviado hoje — nada a fazer
+        if: steps.registro.outputs.cache-hit == 'true' && !inputs.forcar
+        run: |
+          echo "::notice::A mensagem de hoje (${{ steps.trava.outputs.dia }}) já foi enviada ao grupo. Nada a fazer."
+          echo "Para reenviar mesmo assim, rode manualmente marcando 'Forçar reenvio'."
+
       - name: Enviar aniversariantes
+        id: envio
+        if: steps.registro.outputs.cache-hit != 'true' || inputs.forcar
         env:
           # Dados (nunca no repositório — use Secrets)
           ANIVERSARIANTES_FONTE: ${{ secrets.ANIVERSARIANTES_FONTE }}
@@ -83,3 +128,14 @@ jobs:
           else
             python3 scripts/aniversariantes.py
           fi
+
+      - name: Registrar envio do dia
+        if: steps.trava.outputs.grupo == 'true' && steps.envio.outputs.enviado == 'true' && steps.registro.outputs.cache-hit != 'true'
+        run: date > .enviado
+
+      - name: Salvar registro do envio
+        if: steps.trava.outputs.grupo == 'true' && steps.envio.outputs.enviado == 'true' && steps.registro.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .enviado
+          key: aniversariantes-enviado-${{ steps.trava.outputs.dia }}

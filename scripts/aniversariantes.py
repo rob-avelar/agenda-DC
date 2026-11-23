@@ -325,6 +325,11 @@ def enviar(mensagem: str) -> None:
         sys.exit(f"WHATSAPP_PROVEDOR desconhecido: {provedor!r} (use 'zapi' ou 'evolution').")
 
     print(f"Mensagem enviada via {provedor}.")
+    # Avisa o workflow que houve envio real (usado na trava de 1 envio/dia).
+    saida = os.environ.get("GITHUB_OUTPUT")
+    if saida:
+        with open(saida, "a", encoding="utf-8") as f:
+            f.write("enviado=true\n")
     if not SILENCIOSO:
         print(f"Resposta: {resposta[:300]}")
 

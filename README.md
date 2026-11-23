@@ -154,6 +154,12 @@ Recomendo usar um **chip dedicado** conectado ao provedor e adicionado ao grupo.
      dia" com uma data que tenha (ex.: `25/12`).
   3. A mensagem chega no seu WhatsApp com o aviso "🧪 TESTE" no topo. O grupo
      não recebe nada.
+- **Rodar manualmente se o automático atrasar:** *Run workflow* com "Modo
+  teste" desmarcado. Existe uma trava de **um envio por dia ao grupo**: se o
+  automático começar depois (ou já tiver enviado), ele vê o registro do dia e
+  não envia de novo. Para reenviar de propósito, marque "Forçar reenvio".
+  Testes ("Modo teste", "Enviar só para mim" ou "Simular outro dia") não
+  contam para a trava.
 - **No computador:**
 
 ```bash
