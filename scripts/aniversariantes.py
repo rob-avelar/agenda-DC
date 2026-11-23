@@ -240,9 +240,13 @@ def formatar_telefone(valor) -> str:
     return str(valor).strip()
 
 
+DIAS_SEMANA = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
+               "Sexta-feira", "Sábado", "Domingo"]
+
+
 def montar_mensagem(lista: list[Pessoa], hoje: date) -> str:
     titulo = os.environ.get("MENSAGEM_TITULO") or "🎉 *Aniversariantes de hoje*"
-    partes = [f"{titulo} ({hoje:%d/%m})", ""]
+    partes = [f"📅 *{DIAS_SEMANA[hoje.weekday()]}, {hoje:%d/%m/%Y}*", titulo, ""]
     for p in lista:
         bloco = [f"🎂 *{p.nome}*"]
         local = " — ".join(x for x in (p.cidade, p.cargo) if x)

@@ -76,7 +76,8 @@ envia para **um grupo do WhatsApp** quem faz aniversário no dia, com nome,
 cidade, cargo e telefone:
 
 ```
-🎉 *Aniversariantes de hoje* (23/11)
+📅 *Segunda-feira, 23/11/2026*
+🎉 *Aniversariantes de hoje*
 
 🎂 *Maria Exemplo*
 📍 Campinas — Vereadora
