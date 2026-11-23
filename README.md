@@ -68,6 +68,92 @@ python3 scripts/gerar_planilha_exemplo.py
 
 ---
 
+## 🎂 Aniversariantes do dia no WhatsApp
+
+Todo dia às **08:07 (Brasília)** o workflow
+`.github/workflows/aniversariantes.yml` lê a planilha de aniversariantes e
+envia para **um grupo do WhatsApp** quem faz aniversário no dia, com nome,
+cidade, cargo e telefone:
+
+```
+🎉 *Aniversariantes de hoje* (23/11)
+
+🎂 *Maria Exemplo*
+📍 Campinas — Vereadora
+📞 (19) 99999-0000
+
+Deixe seus parabéns! 🥳
+```
+
+Nos dias sem aniversariante, nada é enviado. Para mandar um aviso nesses dias,
+crie a variável `MENSAGEM_SEM_ANIVERSARIANTES`.
+
+### ⚠️ Os dados pessoais não ficam neste repositório
+
+O repositório é público, então a planilha com nomes e telefones **não pode ser
+commitada** (o `.gitignore` bloqueia `data/aniversariantes*`). Os logs do
+Actions também são públicos, por isso o script não imprime nomes nem telefones
+quando roda lá.
+
+### Formato da planilha
+
+Excel (`.xlsx`) ou CSV. A ordem das colunas não importa e os acentos são
+opcionais. Veja o modelo em `data/aniversariantes.exemplo.csv`.
+
+| Coluna       | Obrigatória | Exemplo                       |
+|--------------|:-----------:|-------------------------------|
+| `Nome`       | sim         | Maria Silva                   |
+| `Nascimento` | sim         | 23/11, 23/11/1980 ou data do Excel |
+| `Cidade`     | não         | Campinas                      |
+| `Cargo`      | não         | Vereadora                     |
+| `Telefone`   | não         | 19999990000                   |
+
+Quem nasceu em 29/02 aparece em 28/02 nos anos não bissextos.
+
+### Configuração (Settings → Secrets and variables → Actions)
+
+**1. Onde está a planilha** (crie um destes *Secrets*):
+
+- `ANIVERSARIANTES_FONTE`: um link para baixar a planilha. Com Google Sheets:
+  *Compartilhar → Qualquer pessoa com o link (leitor)* e use
+  `https://docs.google.com/spreadsheets/d/<ID>/export?format=xlsx`.
+  O link fica guardado como segredo e não aparece em lugar nenhum.
+- ou `ANIVERSARIANTES_CSV`: o próprio conteúdo do CSV colado no segredo.
+
+**2. Para onde enviar** (escolha o provedor na *Variable* `WHATSAPP_PROVEDOR`:
+`zapi`, que é o padrão, ou `evolution`):
+
+| Provedor  | Secrets                                                   |
+|-----------|-----------------------------------------------------------|
+| Z-API     | `ZAPI_INSTANCIA`, `ZAPI_TOKEN`, `ZAPI_CLIENT_TOKEN`        |
+| Evolution | `EVOLUTION_URL`, `EVOLUTION_INSTANCIA`, `EVOLUTION_APIKEY` |
+| Ambos     | `WHATSAPP_GRUPO_ID`: o ID do grupo                         |
+
+O ID do grupo é obtido no painel do provedor (na Z-API, em "listar grupos":
+algo como `120363012345678901-group`; na Evolution, `120363012345678901@g.us`).
+Recomendo usar um **chip dedicado** conectado ao provedor e adicionado ao grupo.
+
+**3. Personalização opcional** (*Variables*): `MENSAGEM_TITULO`,
+`MENSAGEM_RODAPE` e `MENSAGEM_SEM_ANIVERSARIANTES`.
+
+### Testando
+
+- **No GitHub:** *Actions → Aniversariantes do dia → Run workflow*. Com
+  "Modo teste" marcado, o workflow lê a planilha e mostra quantos
+  aniversariantes encontrou, mas não envia nada. Desmarque para enviar de
+  verdade. Também é possível simular outro dia.
+- **No computador:**
+
+```bash
+ANIVERSARIANTES_FONTE=data/aniversariantes.exemplo.csv python3 scripts/aniversariantes.py --data 23/11 --dry-run
+```
+
+> O agendamento só roda depois que o workflow estiver na branch `main`. Em
+> repositórios públicos, o GitHub pausa agendamentos depois de 60 dias sem
+> commits. Se isso acontecer, basta reativar em *Actions*.
+
+---
+
 ## Estrutura
 
 ```
@@ -76,8 +162,12 @@ agenda-DC/
 ├── css/styles.css                 # estilos
 ├── js/app.js                      # leitura do Excel + renderização
 ├── data/agenda.xlsx               # dados da agenda (edite este arquivo)
+├── data/aniversariantes.exemplo.csv  # modelo (dados fictícios)
 ├── scripts/gerar_planilha_exemplo.py
-└── .github/workflows/deploy.yml   # deploy automático no GitHub Pages
+├── scripts/aniversariantes.py     # envio diário dos aniversariantes
+└── .github/workflows/
+    ├── deploy.yml                 # deploy automático no GitHub Pages
+    └── aniversariantes.yml        # agendamento diário do WhatsApp
 ```
 
 ## Publicando no GitHub Pages

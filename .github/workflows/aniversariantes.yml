@@ -1,0 +1,61 @@
+name: Aniversariantes do dia (WhatsApp)
+
+# Todo dia às 08:07 (horário de Brasília = 11:07 UTC) envia ao grupo do
+# WhatsApp a lista de aniversariantes. O GitHub pode atrasar alguns minutos.
+# Obs.: agendamentos só rodam a partir da branch principal (main).
+
+on:
+  schedule:
+    - cron: "7 11 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Modo teste (só mostra a mensagem no log, não envia)"
+        type: boolean
+        default: true
+      data:
+        description: "Simular outro dia (dd/mm) — opcional"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install openpyxl
+
+      - name: Enviar aniversariantes
+        env:
+          # Dados (nunca no repositório — use Secrets)
+          ANIVERSARIANTES_FONTE: ${{ secrets.ANIVERSARIANTES_FONTE }}
+          ANIVERSARIANTES_CSV: ${{ secrets.ANIVERSARIANTES_CSV }}
+          # WhatsApp
+          WHATSAPP_PROVEDOR: ${{ vars.WHATSAPP_PROVEDOR || 'zapi' }}
+          WHATSAPP_GRUPO_ID: ${{ secrets.WHATSAPP_GRUPO_ID }}
+          ZAPI_INSTANCIA: ${{ secrets.ZAPI_INSTANCIA }}
+          ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
+          ZAPI_CLIENT_TOKEN: ${{ secrets.ZAPI_CLIENT_TOKEN }}
+          EVOLUTION_URL: ${{ secrets.EVOLUTION_URL }}
+          EVOLUTION_INSTANCIA: ${{ secrets.EVOLUTION_INSTANCIA }}
+          EVOLUTION_APIKEY: ${{ secrets.EVOLUTION_APIKEY }}
+          # Personalização (opcional, em Settings → Variables)
+          MENSAGEM_TITULO: ${{ vars.MENSAGEM_TITULO }}
+          MENSAGEM_RODAPE: ${{ vars.MENSAGEM_RODAPE }}
+          MENSAGEM_SEM_ANIVERSARIANTES: ${{ vars.MENSAGEM_SEM_ANIVERSARIANTES }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          DATA_SIMULADA: ${{ inputs.data }}
+        # O script não imprime nomes nem telefones no log (o log é público).
+        run: |
+          if [ -n "$DATA_SIMULADA" ]; then
+            python3 scripts/aniversariantes.py --data "$DATA_SIMULADA"
+          else
+            python3 scripts/aniversariantes.py
+          fi

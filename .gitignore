@@ -15,3 +15,7 @@ venv/
 # Temporários do Excel
 ~$*.xlsx
 ~$*.xls
+
+# Dados pessoais de aniversariantes — NUNCA versionar (repositório público)
+data/aniversariantes*
+!data/aniversariantes.exemplo.csv
