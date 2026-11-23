@@ -70,7 +70,7 @@ python3 scripts/gerar_planilha_exemplo.py
 
 ## 🎂 Aniversariantes do dia no WhatsApp
 
-Todo dia às **08:07 (Brasília)** o workflow
+Todo dia às **08:00 (Brasília)** o workflow
 `.github/workflows/aniversariantes.yml` lê a planilha de aniversariantes e
 envia para **um grupo do WhatsApp** quem faz aniversário no dia, com nome,
 cidade, cargo e telefone:

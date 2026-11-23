@@ -1,12 +1,17 @@
 name: Aniversariantes do dia (WhatsApp)
 
-# Todo dia às 08:07 (horário de Brasília = 11:07 UTC) envia ao grupo do
-# WhatsApp a lista de aniversariantes. O GitHub pode atrasar alguns minutos.
+# Todo dia às 08:00 (horário de Brasília) envia ao grupo do WhatsApp a lista
+# de aniversariantes.
+#
+# O GitHub costuma atrasar o início dos agendamentos (de minutos a mais de
+# meia hora). Por isso o workflow começa às 07:30 (10:30 UTC) e o passo
+# "Aguardar até 08:00" segura o envio até 08:00 em ponto. Se o GitHub atrasar
+# mais de 30 min, a mensagem sai assim que o workflow começar.
 # Obs.: agendamentos só rodam a partir da branch principal (main).
 
 on:
   schedule:
-    - cron: "7 11 * * *"
+    - cron: "30 10 * * *"   # 07:30 em Brasília (UTC-3, sem horário de verão)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -35,6 +40,19 @@ jobs:
           python-version: "3.12"
 
       - run: pip install openpyxl
+
+      - name: Aguardar até 08:00 (Brasília)
+        if: github.event_name == 'schedule'
+        run: |
+          agora=$(date +%s)
+          alvo=$(TZ=America/Sao_Paulo date -d "today 08:00" +%s)
+          espera=$(( alvo - agora ))
+          if [ "$espera" -gt 0 ]; then
+            echo "Aguardando ${espera}s até 08:00 de Brasília..."
+            sleep "$espera"
+          else
+            echo "Já passou das 08:00 — enviando agora."
+          fi
 
       - name: Enviar aniversariantes
         env:
