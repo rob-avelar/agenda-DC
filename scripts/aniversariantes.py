@@ -251,7 +251,7 @@ def montar_mensagem(lista: list[Pessoa], hoje: date) -> str:
             bloco.append(f"📞 {p.telefone}")
         if p.whatsapp:
             # Link clicável que abre a conversa privada com o aniversariante.
-            bloco.append(f"💬 https://wa.me/{p.whatsapp}")
+            bloco.append(f"💬 Envie uma mensagem privada ao aniversariante: https://wa.me/{p.whatsapp}")
         partes.append("\n".join(bloco))
         partes.append("")
     rodape = os.environ.get("MENSAGEM_RODAPE", "").strip()
