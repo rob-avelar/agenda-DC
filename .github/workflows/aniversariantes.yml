@@ -1,0 +1,162 @@
+name: Aniversariantes do dia (WhatsApp)
+
+# Todo dia às 08:00 (horário de Brasília) envia ao grupo do WhatsApp a lista
+# de aniversariantes.
+#
+# O GitHub costuma atrasar o início dos agendamentos (de minutos a mais de
+# meia hora). Por isso o workflow começa às 07:30 (10:30 UTC) e o passo
+# "Aguardar até 08:00" segura o envio até 08:00 em ponto. Se o GitHub atrasar
+# mais de 30 min, a mensagem sai assim que o workflow começar.
+#
+# Trava de 1 envio por dia: se você rodar manualmente (porque atrasou) e
+# depois o automático começar — ou o contrário — o segundo percebe que o grupo
+# já recebeu a mensagem do dia e NÃO envia de novo. Para reenviar mesmo
+# assim, use a opção "Forçar reenvio".
+# Obs.: agendamentos só rodam a partir da branch principal (main).
+
+on:
+  schedule:
+    - cron: "30 10 * * *"   # 07:30 em Brasília (UTC-3, sem horário de verão)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Modo teste (só mostra a mensagem no log, não envia)"
+        type: boolean
+        default: true
+      so_para_mim:
+        description: "Enviar só para mim (número do secret WHATSAPP_TESTE_NUMERO), não para o grupo"
+        type: boolean
+        default: false
+      data:
+        description: "Simular outro dia (dd/mm) — opcional"
+        required: false
+      forcar:
+        description: "Forçar reenvio ao grupo mesmo que já tenha sido enviado hoje"
+        type: boolean
+        default: false
+      listar_grupos:
+        description: "Listar meus grupos — só mostra o nome do grupo e o ID para WHATSAPP_GRUPO_ID (não envia nada)"
+        type: boolean
+        default: false
+      filtro_grupo:
+        description: "Para 'Listar meus grupos': parte do nome do grupo (recomendado, o log é público)"
+        required: false
+
+permissions:
+  contents: read
+
+# Nunca roda dois envios ao mesmo tempo: o segundo espera o primeiro terminar
+# e então vê, pela trava abaixo, que a mensagem do dia já foi enviada.
+concurrency:
+  group: aniversariantes
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install openpyxl
+
+      - name: Listar meus grupos
+        if: inputs.listar_grupos
+        env:
+          WHATSAPP_PROVEDOR: ${{ vars.WHATSAPP_PROVEDOR || 'zapi' }}
+          ZAPI_INSTANCIA: ${{ secrets.ZAPI_INSTANCIA }}
+          ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
+          ZAPI_CLIENT_TOKEN: ${{ secrets.ZAPI_CLIENT_TOKEN }}
+          EVOLUTION_URL: ${{ secrets.EVOLUTION_URL }}
+          EVOLUTION_INSTANCIA: ${{ secrets.EVOLUTION_INSTANCIA }}
+          EVOLUTION_APIKEY: ${{ secrets.EVOLUTION_APIKEY }}
+          FILTRO_GRUPO: ${{ inputs.filtro_grupo }}
+        run: python3 scripts/aniversariantes.py --listar-grupos "$FILTRO_GRUPO"
+
+      - name: Aguardar até 08:00 (Brasília)
+        if: github.event_name == 'schedule'
+        run: |
+          agora=$(date +%s)
+          alvo=$(TZ=America/Sao_Paulo date -d "today 08:00" +%s)
+          espera=$(( alvo - agora ))
+          if [ "$espera" -gt 0 ]; then
+            echo "Aguardando ${espera}s até 08:00 de Brasília..."
+            sleep "$espera"
+          else
+            echo "Já passou das 08:00 — enviando agora."
+          fi
+
+      - name: Verificar se já foi enviado hoje
+        id: trava
+        if: ${{ !inputs.listar_grupos }}
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          SO_PARA_MIM: ${{ github.event_name == 'workflow_dispatch' && inputs.so_para_mim || 'false' }}
+          DATA_SIMULADA: ${{ inputs.data }}
+        run: |
+          echo "dia=$(TZ=America/Sao_Paulo date +%F)" >> "$GITHUB_OUTPUT"
+          # Só envios reais ao grupo, no dia de hoje, contam para a trava.
+          if [ "$DRY_RUN" != "true" ] && [ "$SO_PARA_MIM" != "true" ] && [ -z "$DATA_SIMULADA" ]; then
+            echo "grupo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Consultar registro de envio do dia
+        id: registro
+        if: steps.trava.outputs.grupo == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .enviado
+          key: aniversariantes-enviado-${{ steps.trava.outputs.dia }}
+          lookup-only: true
+
+      - name: Já enviado hoje — nada a fazer
+        if: steps.registro.outputs.cache-hit == 'true' && !inputs.forcar
+        run: |
+          echo "::notice::A mensagem de hoje (${{ steps.trava.outputs.dia }}) já foi enviada ao grupo. Nada a fazer."
+          echo "Para reenviar mesmo assim, rode manualmente marcando 'Forçar reenvio'."
+
+      - name: Enviar aniversariantes
+        id: envio
+        if: ${{ !inputs.listar_grupos && (steps.registro.outputs.cache-hit != 'true' || inputs.forcar) }}
+        env:
+          # Dados (nunca no repositório — use Secrets)
+          ANIVERSARIANTES_FONTE: ${{ secrets.ANIVERSARIANTES_FONTE }}
+          ANIVERSARIANTES_CSV: ${{ secrets.ANIVERSARIANTES_CSV }}
+          # WhatsApp
+          WHATSAPP_PROVEDOR: ${{ vars.WHATSAPP_PROVEDOR || 'zapi' }}
+          WHATSAPP_GRUPO_ID: ${{ secrets.WHATSAPP_GRUPO_ID }}
+          WHATSAPP_TESTE_NUMERO: ${{ secrets.WHATSAPP_TESTE_NUMERO }}
+          ENVIAR_SO_PARA_MIM: ${{ github.event_name == 'workflow_dispatch' && inputs.so_para_mim || 'false' }}
+          ZAPI_INSTANCIA: ${{ secrets.ZAPI_INSTANCIA }}
+          ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
+          ZAPI_CLIENT_TOKEN: ${{ secrets.ZAPI_CLIENT_TOKEN }}
+          EVOLUTION_URL: ${{ secrets.EVOLUTION_URL }}
+          EVOLUTION_INSTANCIA: ${{ secrets.EVOLUTION_INSTANCIA }}
+          EVOLUTION_APIKEY: ${{ secrets.EVOLUTION_APIKEY }}
+          # Personalização (opcional, em Settings → Variables)
+          MENSAGEM_TITULO: ${{ vars.MENSAGEM_TITULO }}
+          MENSAGEM_RODAPE: ${{ vars.MENSAGEM_RODAPE }}
+          MENSAGEM_SEM_ANIVERSARIANTES: ${{ vars.MENSAGEM_SEM_ANIVERSARIANTES }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          DATA_SIMULADA: ${{ inputs.data }}
+        # O script não imprime nomes nem telefones no log (o log é público).
+        run: |
+          if [ -n "$DATA_SIMULADA" ]; then
+            python3 scripts/aniversariantes.py --data "$DATA_SIMULADA"
+          else
+            python3 scripts/aniversariantes.py
+          fi
+
+      - name: Registrar envio do dia
+        if: steps.trava.outputs.grupo == 'true' && steps.envio.outputs.enviado == 'true' && steps.registro.outputs.cache-hit != 'true'
+        run: date > .enviado
+
+      - name: Salvar registro do envio
+        if: steps.trava.outputs.grupo == 'true' && steps.envio.outputs.enviado == 'true' && steps.registro.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .enviado
+          key: aniversariantes-enviado-${{ steps.trava.outputs.dia }}
