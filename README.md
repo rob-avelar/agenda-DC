@@ -146,6 +146,13 @@ Recomendo usar um **chip dedicado** conectado ao provedor e adicionado ao grupo.
   "Modo teste" marcado, o workflow lê a planilha e mostra quantos
   aniversariantes encontrou, mas não envia nada. Desmarque para enviar de
   verdade. Também é possível simular outro dia.
+- **Enviar um teste só para você** (antes de divulgar no grupo):
+  1. Crie o secret `WHATSAPP_TESTE_NUMERO` com o seu número, ex.: `5519999990000`.
+  2. Em *Run workflow*, **desmarque** "Modo teste", **marque** "Enviar só
+     para mim" e, se hoje não tiver aniversariante, preencha "Simular outro
+     dia" com uma data que tenha (ex.: `25/12`).
+  3. A mensagem chega no seu WhatsApp com o aviso "🧪 TESTE" no topo. O grupo
+     não recebe nada.
 - **No computador:**
 
 ```bash

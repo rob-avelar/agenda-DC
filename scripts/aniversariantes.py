@@ -16,7 +16,8 @@ De onde vem a planilha (variável ANIVERSARIANTES_FONTE):
 Como envia (variável WHATSAPP_PROVEDOR):
   * zapi      — Z-API   (ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN)
   * evolution — Evolution API (EVOLUTION_URL, EVOLUTION_INSTANCIA, EVOLUTION_APIKEY)
-O grupo de destino vai em WHATSAPP_GRUPO_ID.
+O grupo de destino vai em WHATSAPP_GRUPO_ID. Para testar mandando só para
+você, defina WHATSAPP_TESTE_NUMERO (ex.: 5519999990000) e ENVIAR_SO_PARA_MIM=1.
 
 Uso:
     python3 scripts/aniversariantes.py --dry-run            # só mostra a mensagem
@@ -288,7 +289,14 @@ def post_json(url: str, corpo: dict, cabecalhos: dict) -> str:
 
 def enviar(mensagem: str) -> None:
     provedor = (os.environ.get("WHATSAPP_PROVEDOR") or "zapi").strip().lower()
-    grupo = exigir("WHATSAPP_GRUPO_ID")
+    if os.environ.get("ENVIAR_SO_PARA_MIM", "").lower() in ("1", "true", "sim"):
+        grupo = numero_whatsapp(exigir("WHATSAPP_TESTE_NUMERO"))
+        if not grupo:
+            sys.exit("WHATSAPP_TESTE_NUMERO inválido (use DDI + DDD + número).")
+        mensagem = "🧪 *TESTE — enviado só para você*\n\n" + mensagem
+        print("Modo 'só para mim': enviando para o número de teste, NÃO para o grupo.")
+    else:
+        grupo = exigir("WHATSAPP_GRUPO_ID")
 
     if provedor == "zapi":
         instancia = exigir("ZAPI_INSTANCIA")
@@ -303,7 +311,9 @@ def enviar(mensagem: str) -> None:
         base = exigir("EVOLUTION_URL").rstrip("/")
         instancia = exigir("EVOLUTION_INSTANCIA")
         apikey = exigir("EVOLUTION_APIKEY")
-        numero = grupo if "@" in grupo else f"{grupo}@g.us"
+        # IDs de grupo têm mais de 15 dígitos (ou hífen); telefones não.
+        eh_grupo = "-" in grupo or len(re.sub(r"\D", "", grupo)) > 15
+        numero = grupo if "@" in grupo or not eh_grupo else f"{grupo}@g.us"
         url = f"{base}/message/sendText/{instancia}"
         resposta = post_json(url, {"number": numero, "text": mensagem, "linkPreview": False}, {"apikey": apikey})
 

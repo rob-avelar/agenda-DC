@@ -13,6 +13,10 @@ on:
         description: "Modo teste (só mostra a mensagem no log, não envia)"
         type: boolean
         default: true
+      so_para_mim:
+        description: "Enviar só para mim (número do secret WHATSAPP_TESTE_NUMERO), não para o grupo"
+        type: boolean
+        default: false
       data:
         description: "Simular outro dia (dd/mm) — opcional"
         required: false
@@ -40,6 +44,8 @@ jobs:
           # WhatsApp
           WHATSAPP_PROVEDOR: ${{ vars.WHATSAPP_PROVEDOR || 'zapi' }}
           WHATSAPP_GRUPO_ID: ${{ secrets.WHATSAPP_GRUPO_ID }}
+          WHATSAPP_TESTE_NUMERO: ${{ secrets.WHATSAPP_TESTE_NUMERO }}
+          ENVIAR_SO_PARA_MIM: ${{ github.event_name == 'workflow_dispatch' && inputs.so_para_mim || 'false' }}
           ZAPI_INSTANCIA: ${{ secrets.ZAPI_INSTANCIA }}
           ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
           ZAPI_CLIENT_TOKEN: ${{ secrets.ZAPI_CLIENT_TOKEN }}
